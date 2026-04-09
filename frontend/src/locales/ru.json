@@ -1,0 +1,40 @@
+{
+  "nav": {
+    "dashboard": "Панель",
+    "orders": "Заказы",
+    "clients": "Клиенты",
+    "inventory": "Склад",
+    "production": "Производство",
+    "employees": "Сотрудники",
+    "reports": "Отчёты"
+  },
+  "auth": {
+    "login": "Вход в систему",
+    "username": "Логин",
+    "password": "Пароль",
+    "submit": "Войти",
+    "error": "Неверный логин или пароль"
+  },
+  "dashboard": {
+    "title": "Панель управления",
+    "revenue": "Доход за месяц",
+    "totalOrders": "Всего заказов",
+    "activeOrders": "Активные заказы",
+    "completedOrders": "Завершённые",
+    "totalSewn": "Сшито изделий",
+    "defective": "Бракованные",
+    "lowStock": "Мало на складе"
+  },
+  "common": {
+    "add": "Добавить",
+    "edit": "Редактировать",
+    "delete": "Удалить",
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "search": "Поиск",
+    "actions": "Действия",
+    "status": "Статус",
+    "loading": "Загрузка...",
+    "noData": "Нет данных"
+  }
+}

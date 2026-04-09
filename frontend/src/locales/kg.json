@@ -1,0 +1,40 @@
+{
+  "nav": {
+    "dashboard": "Башкы бет",
+    "orders": "Буйрутмалар",
+    "clients": "Кардарлар",
+    "inventory": "Кампа",
+    "production": "Өндүрүш",
+    "employees": "Кызматкерлер",
+    "reports": "Отчёттор"
+  },
+  "auth": {
+    "login": "Системага кирүү",
+    "username": "Логин",
+    "password": "Сырсөз",
+    "submit": "Кирүү",
+    "error": "Логин же сырсөз туура эмес"
+  },
+  "dashboard": {
+    "title": "Башкаруу панели",
+    "revenue": "Айлык киреше",
+    "totalOrders": "Бардык буйрутмалар",
+    "activeOrders": "Активдүү буйрутмалар",
+    "completedOrders": "Аяктаган",
+    "totalSewn": "Тигилген буюмдар",
+    "defective": "Бракталган",
+    "lowStock": "Кампада аз калган"
+  },
+  "common": {
+    "add": "Кошуу",
+    "edit": "Өзгөртүү",
+    "delete": "Өчүрүү",
+    "save": "Сактоо",
+    "cancel": "Жокко чыгаруу",
+    "search": "Издөө",
+    "actions": "Аракеттер",
+    "status": "Статус",
+    "loading": "Жүктөлүүдө...",
+    "noData": "Маалымат жок"
+  }
+}

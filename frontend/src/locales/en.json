@@ -1,0 +1,40 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "orders": "Orders",
+    "clients": "Clients",
+    "inventory": "Inventory",
+    "production": "Production",
+    "employees": "Employees",
+    "reports": "Reports"
+  },
+  "auth": {
+    "login": "Sign In",
+    "username": "Username",
+    "password": "Password",
+    "submit": "Log In",
+    "error": "Invalid credentials"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "revenue": "Monthly Revenue",
+    "totalOrders": "Total Orders",
+    "activeOrders": "Active Orders",
+    "completedOrders": "Completed",
+    "totalSewn": "Items Sewn",
+    "defective": "Defective",
+    "lowStock": "Low Stock Alerts"
+  },
+  "common": {
+    "add": "Add",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel",
+    "search": "Search",
+    "actions": "Actions",
+    "status": "Status",
+    "loading": "Loading...",
+    "noData": "No data available"
+  }
+}
