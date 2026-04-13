@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiPlus, FiSearch, FiEdit2, FiTrash2 } from 'react-icons/fi';
+import { FiPlus, FiSearch, FiEdit2, FiTrash2, FiX, FiPackage } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import StatusBadge, { getStatusLabel } from '../../common/StatusBadge';
 import Avatar from '../../common/Avatar';
@@ -8,7 +8,7 @@ import Pagination from '../../common/Pagination';
 import EmptyState from '../../common/EmptyState';
 import LoadingSpinner from '../../common/LoadingSpinner';
 import Modal from '../../common/Modal';
-import { ordersApi, clientsApi, productsApi, materialsApi } from '../../../api/services';
+import { ordersApi, clientsApi, productsApi, materialsApi, technicalCardApi } from '../../../api/services';
 
 const ORDER_STATUSES = ['NEW', 'IN_PROGRESS', 'CUTTING', 'SEWING', 'PACKAGING', 'SHIPPED', 'COMPLETED', 'CANCELLED'];
 
@@ -23,10 +23,10 @@ export default function OrdersPage() {
   const [editOrder, setEditOrder] = useState(null);
   const [clients, setClients] = useState([]);
   const [products, setProducts] = useState([]);
+  const [allMaterials, setAllMaterials] = useState([]);
   const [form, setForm] = useState({ clientId: '', productId: '', quantity: 1, deadline: '', notes: '' });
-  const [stockWarnings, setStockWarnings] = useState([]);
-  const [stockCheck, setStockCheck] = useState(null);
-  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [techCard, setTechCard] = useState([]);
+  const [newTc, setNewTc] = useState({ materialId: '', quantityPerUnit: '' });
   const itemsPerPage = 10;
 
   useEffect(() => { fetchOrders(); }, []);
@@ -40,30 +40,23 @@ export default function OrdersPage() {
 
   const fetchFormData = async () => {
     try {
-      const [c, p] = await Promise.all([clientsApi.getAll(), productsApi.getAll()]);
-      setClients(c.data); setProducts(p.data);
+      const [c, p, m] = await Promise.all([clientsApi.getAll(), productsApi.getAll(), materialsApi.getAll()]);
+      setClients(c.data); setProducts(p.data); setAllMaterials(m.data);
     } catch {}
   };
 
-  const checkStockAvailability = async (productId, quantity) => {
-    if (!productId || !quantity) { setStockWarnings([]); setStockCheck(null); return; }
+  const loadTechCard = async (productId) => {
+    if (!productId) { setTechCard([]); return; }
     try {
-      const [stockRes, prodRes] = await Promise.all([
-        materialsApi.checkStock(productId, quantity),
-        productsApi.getById(productId),
-      ]);
-      setStockCheck(stockRes.data);
-      setStockWarnings(stockRes.data.warnings || []);
-      setSelectedProduct(prodRes.data);
-    } catch { setStockWarnings([]); setStockCheck(null); }
+      const res = await technicalCardApi.getByProduct(productId);
+      setTechCard(res.data);
+    } catch { setTechCard([]); }
   };
 
   const openCreateModal = () => {
     setEditOrder(null);
     setForm({ clientId: '', productId: '', quantity: 1, deadline: '', notes: '' });
-    setStockWarnings([]);
-    setStockCheck(null);
-    setSelectedProduct(null);
+    setTechCard([]); setNewTc({ materialId: '', quantityPerUnit: '' });
     fetchFormData();
     setShowModal(true);
   };
@@ -71,8 +64,32 @@ export default function OrdersPage() {
   const openEditModal = (order) => {
     setEditOrder(order);
     setForm({ clientId: order.client?.id || '', productId: order.product?.id || '', quantity: order.quantity, deadline: order.deadline || '', notes: order.notes || '' });
+    setNewTc({ materialId: '', quantityPerUnit: '' });
     fetchFormData();
+    if (order.product?.id) loadTechCard(order.product.id);
     setShowModal(true);
+  };
+
+  const handleProductChange = (pid) => {
+    setForm({ ...form, productId: pid });
+    loadTechCard(pid);
+  };
+
+  const addTechCardItem = async () => {
+    if (!newTc.materialId || !newTc.quantityPerUnit || !form.productId) return;
+    try {
+      await technicalCardApi.create({ productId: parseInt(form.productId), materialId: parseInt(newTc.materialId), quantityPerUnit: parseFloat(newTc.quantityPerUnit) });
+      await loadTechCard(form.productId);
+      setNewTc({ materialId: '', quantityPerUnit: '' });
+      toast.success(t('common.save'));
+    } catch { toast.error(t('common.error')); }
+  };
+
+  const deleteTechCardItem = async (tcId) => {
+    try {
+      await technicalCardApi.delete(tcId);
+      setTechCard(techCard.filter(tc => tc.id !== tcId));
+    } catch { toast.error(t('common.error')); }
   };
 
   const handleSubmit = async (e) => {
@@ -102,6 +119,7 @@ export default function OrdersPage() {
   });
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const unitLabel = (u) => t(`inventory.units.${u}`) || u;
 
   if (loading) return <LoadingSpinner />;
 
@@ -188,7 +206,8 @@ export default function OrdersPage() {
       </div>
 
       <Modal isOpen={showModal} onClose={() => setShowModal(false)}
-        title={editOrder ? t('orders.editTitle') : t('orders.createTitle')} subtitle={t('orders.formSubtitle')}>
+        title={editOrder ? t('orders.editTitle') : t('orders.createTitle')} subtitle={t('orders.formSubtitle')}
+        maxWidth="max-w-2xl">
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -201,7 +220,7 @@ export default function OrdersPage() {
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase mb-2">{t('orders.model')}</label>
-              <select value={form.productId} onChange={(e) => { const pid = e.target.value; setForm({ ...form, productId: pid }); checkStockAvailability(pid, form.quantity); }} required
+              <select value={form.productId} onChange={(e) => handleProductChange(e.target.value)} required
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none">
                 <option value="">{t('orders.selectProduct')}</option>
                 {products.map((p) => <option key={p.id} value={p.id}>{p.name} — {p.price?.toLocaleString()} {t('common.som')}</option>)}
@@ -212,7 +231,7 @@ export default function OrdersPage() {
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase mb-2">{t('orders.quantity')}</label>
               <input type="number" min="1" value={form.quantity}
-                onChange={(e) => { const qty = parseInt(e.target.value) || 1; setForm({ ...form, quantity: qty }); checkStockAvailability(form.productId, qty); }} required
+                onChange={(e) => setForm({ ...form, quantity: parseInt(e.target.value) || 1 })} required
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none" />
             </div>
             <div>
@@ -223,56 +242,70 @@ export default function OrdersPage() {
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase mb-2">{t('orders.notes')}</label>
-            <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3}
+            <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2}
               className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none resize-none" />
           </div>
-          {/* Material usage table */}
-          {selectedProduct && selectedProduct.technicalCard && selectedProduct.technicalCard.length > 0 && (
-            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-              <p className="text-sm font-semibold text-gray-700 mb-3">{t('orders.materialUsage')}</p>
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="text-gray-400 uppercase">
-                    <th className="text-left pb-2 font-medium">{t('orders.material')}</th>
-                    <th className="text-center pb-2 font-medium">{t('orders.perUnit')}</th>
-                    <th className="text-center pb-2 font-medium">{t('orders.totalNeed')}</th>
-                    <th className="text-center pb-2 font-medium">{t('orders.inStock')}</th>
-                    <th className="text-center pb-2 font-medium">{t('orders.stockStatus')}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {selectedProduct.technicalCard.map((tc, i) => {
+
+          {/* Material usage section - editable */}
+          {form.productId && (
+            <div className="border border-gray-200 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <FiPackage size={16} className="text-primary-600" />
+                <p className="text-sm font-semibold text-gray-700">{t('orders.materialUsage')}</p>
+              </div>
+
+              {techCard.length > 0 ? (
+                <div className="space-y-2 mb-3">
+                  {techCard.map((tc) => {
                     const needed = (tc.quantityPerUnit * form.quantity).toFixed(1);
                     const available = tc.material?.quantity || 0;
-                    const isEnough = available >= needed;
+                    const isEnough = parseFloat(available) >= parseFloat(needed);
                     return (
-                      <tr key={i}>
-                        <td className="py-2 text-gray-700 font-medium">{tc.material?.name}</td>
-                        <td className="py-2 text-gray-500 text-center">{tc.quantityPerUnit}</td>
-                        <td className="py-2 text-gray-700 text-center font-medium">{needed}</td>
-                        <td className="py-2 text-gray-500 text-center">{available}</td>
-                        <td className="py-2 text-center">
-                          <span className={`px-2 py-0.5 rounded-full font-semibold ${isEnough ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                      <div key={tc.id} className={`flex items-center justify-between rounded-lg px-3 py-2 ${isEnough ? 'bg-green-50' : 'bg-red-50'}`}>
+                        <div className="flex-1">
+                          <span className="text-sm text-gray-700 font-medium">{tc.material?.name}</span>
+                          <span className="text-xs text-gray-400 ml-2">
+                            {tc.quantityPerUnit} {unitLabel(tc.material?.unit)} x {form.quantity} = <b>{needed}</b>
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs text-gray-500">{t('orders.inStock')}: {available}</span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${isEnough ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                             {isEnough ? t('orders.enough') : t('orders.notEnough')}
                           </span>
-                        </td>
-                      </tr>
+                          <button type="button" onClick={() => deleteTechCardItem(tc.id)} className="text-gray-400 hover:text-red-500">
+                            <FiX size={14} />
+                          </button>
+                        </div>
+                      </div>
                     );
                   })}
-                </tbody>
-              </table>
+                </div>
+              ) : (
+                <p className="text-xs text-yellow-600 bg-yellow-50 rounded-lg p-2 mb-3">{t('orders.noTechCard')}</p>
+              )}
+
+              {/* Add new material to tech card */}
+              <div className="flex gap-2">
+                <select value={newTc.materialId} onChange={(e) => setNewTc({ ...newTc, materialId: e.target.value })}
+                  className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none">
+                  <option value="">{t('orders.material')}...</option>
+                  {allMaterials.filter(m => !techCard.some(tc => tc.material?.id === m.id)).map(m => (
+                    <option key={m.id} value={m.id}>{m.name} ({m.quantity} {unitLabel(m.unit)})</option>
+                  ))}
+                </select>
+                <input type="number" min="0.001" step="0.001" value={newTc.quantityPerUnit}
+                  onChange={(e) => setNewTc({ ...newTc, quantityPerUnit: e.target.value })}
+                  placeholder={t('orders.perUnit')}
+                  className="w-28 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none" />
+                <button type="button" onClick={addTechCardItem}
+                  className="px-3 py-2 bg-blue-100 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-200">
+                  <FiPlus size={16} />
+                </button>
+              </div>
             </div>
           )}
-          {selectedProduct && (!selectedProduct.technicalCard || selectedProduct.technicalCard.length === 0) && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-xs text-yellow-700">
-              {t('orders.noTechCard')}
-            </div>
-          )}
-          {stockWarnings.length > 0 && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-3">
-              <p className="text-xs font-semibold text-red-700">{t('orders.stockWarning')}: {stockWarnings.length} {t('orders.material').toLowerCase()}</p>
-            </div>
-          )}
+
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-3 border border-gray-200 text-gray-600 rounded-xl font-medium hover:bg-gray-50 text-sm">{t('common.cancel')}</button>
             <button type="submit" className="flex-1 py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 text-sm">{t('orders.save')}</button>
