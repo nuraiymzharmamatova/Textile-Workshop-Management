@@ -27,7 +27,7 @@ public class ProductionReport {
     private Order order;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "employee_id", nullable = false)
+    @JoinColumn(name = "employee_id")
     @JsonIgnoreProperties({"productionReports", "hibernateLazyInitializer"})
     private Employee employee;
 

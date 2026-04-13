@@ -14,7 +14,6 @@ public class ProductionReportRequest {
     @NotNull(message = "Order ID is required")
     private Long orderId;
 
-    @NotNull(message = "Employee ID is required")
     private Long employeeId;
 
     @NotNull(message = "Report date is required")

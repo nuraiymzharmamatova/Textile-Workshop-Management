@@ -8,7 +8,7 @@ import Pagination from '../../common/Pagination';
 import EmptyState from '../../common/EmptyState';
 import LoadingSpinner from '../../common/LoadingSpinner';
 import Modal from '../../common/Modal';
-import { ordersApi, clientsApi, productsApi } from '../../../api/services';
+import { ordersApi, clientsApi, productsApi, materialsApi } from '../../../api/services';
 
 const ORDER_STATUSES = ['NEW', 'IN_PROGRESS', 'CUTTING', 'SEWING', 'PACKAGING', 'SHIPPED', 'COMPLETED', 'CANCELLED'];
 
@@ -24,6 +24,7 @@ export default function OrdersPage() {
   const [clients, setClients] = useState([]);
   const [products, setProducts] = useState([]);
   const [form, setForm] = useState({ clientId: '', productId: '', quantity: 1, deadline: '', notes: '' });
+  const [stockWarnings, setStockWarnings] = useState([]);
 
   const itemsPerPage = 10;
 
@@ -52,9 +53,18 @@ export default function OrdersPage() {
     }
   };
 
+  const checkStockAvailability = async (productId, quantity) => {
+    if (!productId || !quantity) { setStockWarnings([]); return; }
+    try {
+      const res = await materialsApi.checkStock(productId, quantity);
+      setStockWarnings(res.data.warnings || []);
+    } catch { setStockWarnings([]); }
+  };
+
   const openCreateModal = () => {
     setEditOrder(null);
     setForm({ clientId: '', productId: '', quantity: 1, deadline: '', notes: '' });
+    setStockWarnings([]);
     fetchFormData();
     setShowModal(true);
   };
@@ -232,7 +242,7 @@ export default function OrdersPage() {
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase mb-2">Модель</label>
-              <select value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value })} required
+              <select value={form.productId} onChange={(e) => { const pid = e.target.value; setForm({ ...form, productId: pid }); checkStockAvailability(pid, form.quantity); }} required
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none">
                 <option value="">Выберите модель</option>
                 {products.map((p) => <option key={p.id} value={p.id}>{p.name} — {p.price?.toLocaleString()} сом</option>)}
@@ -243,7 +253,7 @@ export default function OrdersPage() {
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase mb-2">Количество</label>
               <input type="number" min="1" value={form.quantity}
-                onChange={(e) => setForm({ ...form, quantity: parseInt(e.target.value) || 1 })} required
+                onChange={(e) => { const qty = parseInt(e.target.value) || 1; setForm({ ...form, quantity: qty }); checkStockAvailability(form.productId, qty); }} required
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none" />
             </div>
             <div>
@@ -259,11 +269,22 @@ export default function OrdersPage() {
               placeholder="Особенности ткани, фурнитуры или замеры..."
               className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none resize-none" />
           </div>
+          {/* Stock warnings */}
+          {stockWarnings.length > 0 && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+              <p className="text-sm font-semibold text-yellow-800 mb-2">{t('orders.stockWarning')}</p>
+              {stockWarnings.map((w, i) => (
+                <p key={i} className="text-xs text-yellow-700">
+                  {w.materialName}: {t('orders.stockNeeded')} {w.required} — {t('orders.stockAvailable')} {w.available} (deficit: {w.deficit})
+                </p>
+              ))}
+            </div>
+          )}
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={() => setShowModal(false)}
               className="flex-1 py-3 border border-gray-200 text-gray-600 rounded-xl font-medium hover:bg-gray-50 text-sm">{t('common.cancel')}</button>
             <button type="submit"
-              className="flex-1 py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 text-sm">Сохранить заказ</button>
+              className="flex-1 py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 text-sm">{t('orders.save')}</button>
           </div>
         </form>
       </Modal>

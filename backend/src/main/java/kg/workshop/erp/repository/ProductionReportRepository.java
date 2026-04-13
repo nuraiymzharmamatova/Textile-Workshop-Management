@@ -16,8 +16,13 @@ public interface ProductionReportRepository extends JpaRepository<ProductionRepo
 
     List<ProductionReport> findByReportDateBetween(LocalDate from, LocalDate to);
 
+    List<ProductionReport> findByReportDate(LocalDate date);
+
     @Query("SELECT COALESCE(SUM(pr.sewn), 0) FROM ProductionReport pr WHERE pr.employee.id = :employeeId AND pr.reportDate BETWEEN :from AND :to")
     int sumSewnByEmployeeAndPeriod(@Param("employeeId") Long employeeId, @Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    @Query("SELECT COALESCE(SUM(pr.defective), 0) FROM ProductionReport pr WHERE pr.employee.id = :employeeId AND pr.reportDate BETWEEN :from AND :to")
+    int sumDefectiveByEmployeeAndPeriod(@Param("employeeId") Long employeeId, @Param("from") LocalDate from, @Param("to") LocalDate to);
 
     @Query("SELECT COALESCE(SUM(pr.sewn), 0) FROM ProductionReport pr WHERE pr.reportDate BETWEEN :from AND :to")
     int sumSewnByPeriod(@Param("from") LocalDate from, @Param("to") LocalDate to);

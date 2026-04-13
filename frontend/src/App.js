@@ -12,6 +12,8 @@ import InventoryPage from './components/pages/inventory/InventoryPage';
 import ProductionPage from './components/pages/production/ProductionPage';
 import EmployeesPage from './components/pages/employees/EmployeesPage';
 import ReportsPage from './components/pages/reports/ReportsPage';
+import ProductsPage from './components/pages/products/ProductsPage';
+import ProfilePage from './components/pages/profile/ProfilePage';
 
 function PrivateRoute({ children }) {
   const { user } = useAuth();
@@ -37,7 +39,9 @@ function App() {
             <Route path="inventory" element={<InventoryPage />} />
             <Route path="production" element={<ProductionPage />} />
             <Route path="employees" element={<EmployeesPage />} />
+            <Route path="products" element={<ProductsPage />} />
             <Route path="reports" element={<ReportsPage />} />
+            <Route path="profile" element={<ProfilePage />} />
           </Route>
         </Routes>
       </Router>

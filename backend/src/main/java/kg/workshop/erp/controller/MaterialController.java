@@ -2,6 +2,7 @@ package kg.workshop.erp.controller;
 
 import jakarta.validation.Valid;
 import kg.workshop.erp.dto.request.MaterialPurchaseRequest;
+import kg.workshop.erp.dto.response.StockCheckResponse;
 import kg.workshop.erp.entity.Material;
 import kg.workshop.erp.entity.MaterialPurchase;
 import kg.workshop.erp.service.MaterialService;
@@ -53,5 +54,10 @@ public class MaterialController {
     @PostMapping("/purchases")
     public ResponseEntity<MaterialPurchase> addPurchase(@Valid @RequestBody MaterialPurchaseRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(materialService.addPurchase(request));
+    }
+
+    @GetMapping("/check-stock")
+    public ResponseEntity<StockCheckResponse> checkStock(@RequestParam Long productId, @RequestParam int quantity) {
+        return ResponseEntity.ok(materialService.checkStock(productId, quantity));
     }
 }

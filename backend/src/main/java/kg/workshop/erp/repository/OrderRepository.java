@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -21,4 +22,10 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     @Query("SELECT COUNT(o) FROM Order o WHERE o.status = :status")
     long countByStatus(@Param("status") OrderStatus status);
+
+    @Query("SELECT o FROM Order o WHERE o.deadline BETWEEN :from AND :to AND o.status NOT IN ('COMPLETED', 'CANCELLED')")
+    List<Order> findApproachingDeadlines(@Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    @Query("SELECT o FROM Order o WHERE o.deadline < :date AND o.status NOT IN ('COMPLETED', 'CANCELLED')")
+    List<Order> findOverdueOrders(@Param("date") LocalDate date);
 }

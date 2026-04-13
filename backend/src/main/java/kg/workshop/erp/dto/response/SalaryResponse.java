@@ -10,9 +10,11 @@ import java.math.BigDecimal;
 public class SalaryResponse {
     private Long employeeId;
     private String employeeName;
+    private String salaryType;
     private int totalSewn;
     private int totalDefective;
     private BigDecimal ratePerItem;
+    private BigDecimal fixedSalary;
     private BigDecimal totalSalary;
     private String period;
 }

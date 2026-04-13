@@ -2,6 +2,7 @@ package kg.workshop.erp.service.impl;
 
 import kg.workshop.erp.dto.response.SalaryResponse;
 import kg.workshop.erp.entity.Employee;
+import kg.workshop.erp.enums.SalaryType;
 import kg.workshop.erp.exception.ResourceNotFoundException;
 import kg.workshop.erp.repository.EmployeeRepository;
 import kg.workshop.erp.repository.ProductionReportRepository;
@@ -48,7 +49,9 @@ public class EmployeeServiceImpl implements EmployeeService {
         employee.setFullName(updated.getFullName());
         employee.setPhone(updated.getPhone());
         employee.setPosition(updated.getPosition());
+        employee.setSalaryType(updated.getSalaryType());
         employee.setRatePerItem(updated.getRatePerItem());
+        employee.setFixedSalary(updated.getFixedSalary());
         employee.setActive(updated.getActive());
         return employeeRepository.save(employee);
     }
@@ -67,19 +70,30 @@ public class EmployeeServiceImpl implements EmployeeService {
         String period = from.format(DateTimeFormatter.ofPattern("MM.yyyy"));
 
         return activeEmployees.stream().map(employee -> {
-            int totalSewn = productionReportRepository.sumSewnByEmployeeAndPeriod(
-                    employee.getId(), from, to);
-            int totalDefective = productionReportRepository.sumDefectiveByPeriod(from, to);
+            BigDecimal salary;
 
-            int goodItems = Math.max(0, totalSewn - totalDefective);
-            BigDecimal salary = employee.getRatePerItem().multiply(BigDecimal.valueOf(goodItems));
+            if (employee.getSalaryType() == SalaryType.FIXED) {
+                salary = employee.getFixedSalary() != null ? employee.getFixedSalary() : BigDecimal.ZERO;
+            } else {
+                int totalSewn = productionReportRepository.sumSewnByEmployeeAndPeriod(
+                        employee.getId(), from, to);
+                int totalDefective = productionReportRepository.sumDefectiveByEmployeeAndPeriod(
+                        employee.getId(), from, to);
+                int goodItems = Math.max(0, totalSewn - totalDefective);
+                salary = employee.getRatePerItem().multiply(BigDecimal.valueOf(goodItems));
+            }
+
+            int totalSewn = productionReportRepository.sumSewnByEmployeeAndPeriod(employee.getId(), from, to);
+            int totalDefective = productionReportRepository.sumDefectiveByEmployeeAndPeriod(employee.getId(), from, to);
 
             return SalaryResponse.builder()
                     .employeeId(employee.getId())
                     .employeeName(employee.getFullName())
+                    .salaryType(employee.getSalaryType().name())
                     .totalSewn(totalSewn)
                     .totalDefective(totalDefective)
                     .ratePerItem(employee.getRatePerItem())
+                    .fixedSalary(employee.getFixedSalary())
                     .totalSalary(salary)
                     .period(period)
                     .build();

@@ -2,6 +2,7 @@ package kg.workshop.erp.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+import kg.workshop.erp.enums.SalaryType;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -32,8 +33,17 @@ public class Employee {
     @Column(nullable = false, length = 50)
     private String position;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private SalaryType salaryType = SalaryType.PIECEWORK;
+
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal ratePerItem;
+
+    @Column(precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal fixedSalary = BigDecimal.ZERO;
 
     @Column(nullable = false)
     @Builder.Default

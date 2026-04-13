@@ -2,6 +2,7 @@ package kg.workshop.erp.controller;
 
 import jakarta.validation.Valid;
 import kg.workshop.erp.dto.request.ProductionReportRequest;
+import kg.workshop.erp.dto.response.ProductionSummaryResponse;
 import kg.workshop.erp.entity.ProductionReport;
 import kg.workshop.erp.service.ProductionReportService;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,12 @@ public class ProductionController {
         return ResponseEntity.status(HttpStatus.CREATED).body(reportService.create(request));
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        reportService.delete(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/date/{date}")
     public ResponseEntity<List<ProductionReport>> getByDate(
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
@@ -44,5 +51,12 @@ public class ProductionController {
     @GetMapping("/order/{orderId}")
     public ResponseEntity<List<ProductionReport>> getByOrder(@PathVariable Long orderId) {
         return ResponseEntity.ok(reportService.getByOrderId(orderId));
+    }
+
+    @GetMapping("/summary/daily")
+    public ResponseEntity<List<ProductionSummaryResponse>> getDailySummary(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return ResponseEntity.ok(reportService.getDailySummary(from, to));
     }
 }

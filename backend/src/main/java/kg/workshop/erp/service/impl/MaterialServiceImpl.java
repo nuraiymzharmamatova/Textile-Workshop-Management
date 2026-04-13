@@ -1,6 +1,7 @@
 package kg.workshop.erp.service.impl;
 
 import kg.workshop.erp.dto.request.MaterialPurchaseRequest;
+import kg.workshop.erp.dto.response.StockCheckResponse;
 import kg.workshop.erp.entity.Material;
 import kg.workshop.erp.entity.MaterialPurchase;
 import kg.workshop.erp.entity.TechnicalCardItem;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -99,5 +101,32 @@ public class MaterialServiceImpl implements MaterialService {
             material.setQuantity(material.getQuantity().subtract(required));
             materialRepository.save(material);
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public StockCheckResponse checkStock(Long productId, int quantity) {
+        List<TechnicalCardItem> cardItems = technicalCardItemRepository.findByProductId(productId);
+        List<StockCheckResponse.StockWarning> warnings = new ArrayList<>();
+
+        for (TechnicalCardItem item : cardItems) {
+            Material material = item.getMaterial();
+            BigDecimal required = item.getQuantityPerUnit().multiply(BigDecimal.valueOf(quantity));
+
+            if (material.getQuantity().compareTo(required) < 0) {
+                warnings.add(StockCheckResponse.StockWarning.builder()
+                        .materialName(material.getName())
+                        .unit(material.getUnit().name())
+                        .required(required)
+                        .available(material.getQuantity())
+                        .deficit(required.subtract(material.getQuantity()))
+                        .build());
+            }
+        }
+
+        return StockCheckResponse.builder()
+                .sufficient(warnings.isEmpty())
+                .warnings(warnings)
+                .build();
     }
 }
