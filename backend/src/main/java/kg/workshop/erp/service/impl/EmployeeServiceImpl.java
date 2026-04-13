@@ -2,8 +2,10 @@ package kg.workshop.erp.service.impl;
 
 import kg.workshop.erp.dto.response.SalaryResponse;
 import kg.workshop.erp.entity.Employee;
+import kg.workshop.erp.entity.EmployeeOperation;
 import kg.workshop.erp.enums.SalaryType;
 import kg.workshop.erp.exception.ResourceNotFoundException;
+import kg.workshop.erp.repository.EmployeeOperationRepository;
 import kg.workshop.erp.repository.EmployeeRepository;
 import kg.workshop.erp.repository.ProductionReportRepository;
 import kg.workshop.erp.service.EmployeeService;
@@ -24,6 +26,7 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     private final EmployeeRepository employeeRepository;
     private final ProductionReportRepository productionReportRepository;
+    private final EmployeeOperationRepository employeeOperationRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -70,22 +73,52 @@ public class EmployeeServiceImpl implements EmployeeService {
         List<Employee> activeEmployees = employeeRepository.findByActiveTrue();
         String period = from.format(DateTimeFormatter.ofPattern("MM.yyyy"));
 
+        // Total production for the period (all reports, no employee filter)
+        int periodTotalSewn = productionReportRepository.sumSewnByPeriod(from, to);
+        int periodTotalDefective = productionReportRepository.sumDefectiveByPeriod(from, to);
+
         return activeEmployees.stream().map(employee -> {
             BigDecimal salary;
+            int totalSewn;
+            int totalDefective;
 
             if (employee.getSalaryType() == SalaryType.FIXED) {
                 salary = employee.getFixedSalary() != null ? employee.getFixedSalary() : BigDecimal.ZERO;
+                totalSewn = 0;
+                totalDefective = 0;
             } else {
-                int totalSewn = productionReportRepository.sumSewnByEmployeeAndPeriod(
-                        employee.getId(), from, to);
-                int totalDefective = productionReportRepository.sumDefectiveByEmployeeAndPeriod(
-                        employee.getId(), from, to);
-                int goodItems = Math.max(0, totalSewn - totalDefective);
-                salary = employee.getRatePerItem().multiply(BigDecimal.valueOf(goodItems));
-            }
+                // Piecework: calculate based on assigned operations
+                // If employee has assigned operations, salary = totalSewn * sum(operation costs)
+                // If no operations assigned, use ratePerItem * totalSewn
+                List<EmployeeOperation> empOps = employeeOperationRepository.findByEmployeeId(employee.getId());
 
-            int totalSewn = productionReportRepository.sumSewnByEmployeeAndPeriod(employee.getId(), from, to);
-            int totalDefective = productionReportRepository.sumDefectiveByEmployeeAndPeriod(employee.getId(), from, to);
+                // Check if there are per-employee reports
+                int empSewn = productionReportRepository.sumSewnByEmployeeAndPeriod(employee.getId(), from, to);
+                int empDefective = productionReportRepository.sumDefectiveByEmployeeAndPeriod(employee.getId(), from, to);
+
+                if (empSewn > 0) {
+                    // Employee has personal reports
+                    totalSewn = empSewn;
+                    totalDefective = empDefective;
+                } else {
+                    // No personal reports — use total production
+                    totalSewn = periodTotalSewn;
+                    totalDefective = periodTotalDefective;
+                }
+
+                int goodItems = Math.max(0, totalSewn - totalDefective);
+
+                if (!empOps.isEmpty()) {
+                    // Sum cost of all assigned operations
+                    BigDecimal opsCost = empOps.stream()
+                            .map(eo -> eo.getOperation().getCost())
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    salary = opsCost.multiply(BigDecimal.valueOf(goodItems));
+                } else {
+                    // Fallback to ratePerItem
+                    salary = employee.getRatePerItem().multiply(BigDecimal.valueOf(goodItems));
+                }
+            }
 
             return SalaryResponse.builder()
                     .employeeId(employee.getId())
