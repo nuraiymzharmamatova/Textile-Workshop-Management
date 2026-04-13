@@ -3,13 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { FiSave, FiFileText, FiTarget, FiTrash2 } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import LoadingSpinner from '../../common/LoadingSpinner';
-import { productionApi, ordersApi } from '../../../api/services';
+import { productionApi, ordersApi, sewingOperationsApi } from '../../../api/services';
 
 export default function ProductionPage() {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [reports, setReports] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [orderOperations, setOrderOperations] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
     orderId: '', reportDate: new Date().toISOString().split('T')[0],
@@ -105,7 +106,17 @@ export default function ProductionPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase mb-2">{t('production.order')}</label>
-              <select value={form.orderId} onChange={(e) => setForm({ ...form, orderId: e.target.value })} required
+              <select value={form.orderId} onChange={async (e) => {
+                const oid = e.target.value;
+                setForm({ ...form, orderId: oid });
+                if (oid) {
+                  const order = orders.find(o => String(o.id) === oid);
+                  if (order?.product?.id) {
+                    try { const res = await sewingOperationsApi.getByProduct(order.product.id); setOrderOperations(res.data); }
+                    catch { setOrderOperations([]); }
+                  }
+                } else { setOrderOperations([]); }
+              }} required
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none">
                 <option value="">{t('production.selectOrder')}</option>
                 {orders.map((o) => (
@@ -140,6 +151,22 @@ export default function ProductionPage() {
               <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2}
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none resize-none" />
             </div>
+            {/* Auto salary calculation */}
+            {orderOperations.length > 0 && form.sewn > 0 && (
+              <div className="bg-green-50 border border-green-200 rounded-xl p-3">
+                <p className="text-xs font-semibold text-green-700 mb-2">{t('employees.salaryCalc')}:</p>
+                {orderOperations.map((op) => (
+                  <div key={op.id} className="flex justify-between text-xs text-green-600">
+                    <span>{op.name}</span>
+                    <span>{form.sewn} x {op.cost} = <b>{(form.sewn * op.cost).toFixed(0)} {t('common.som')}</b></span>
+                  </div>
+                ))}
+                <div className="border-t border-green-200 mt-2 pt-1 flex justify-between text-sm font-bold text-green-800">
+                  <span>{t('employees.totalSalary')}</span>
+                  <span>{orderOperations.reduce((s, op) => s + form.sewn * op.cost, 0).toFixed(0)} {t('common.som')}</span>
+                </div>
+              </div>
+            )}
             <button type="submit" disabled={submitting}
               className="w-full py-3 bg-primary-600 text-white rounded-xl font-semibold hover:bg-primary-700 disabled:opacity-50 flex items-center justify-center gap-2 text-sm">
               <FiSave size={18} />

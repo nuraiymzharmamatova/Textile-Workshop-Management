@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiPlus, FiSearch, FiEdit2, FiTrash2, FiBox, FiX } from 'react-icons/fi';
+import { FiPlus, FiSearch, FiEdit2, FiTrash2, FiBox, FiX, FiPackage } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import Modal from '../../common/Modal';
 import EmptyState from '../../common/EmptyState';
 import LoadingSpinner from '../../common/LoadingSpinner';
-import { productsApi, sewingOperationsApi } from '../../../api/services';
+import { productsApi, sewingOperationsApi, technicalCardApi, materialsApi } from '../../../api/services';
 
 export default function ProductsPage() {
   const { t } = useTranslation();
   const [products, setProducts] = useState([]);
+  const [allMaterials, setAllMaterials] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -17,41 +18,28 @@ export default function ProductsPage() {
   const [form, setForm] = useState({ name: '', description: '', price: 0, laborCost: 0 });
   const [operations, setOperations] = useState([]);
   const [newOp, setNewOp] = useState({ name: '', cost: '' });
+  const [techCard, setTechCard] = useState([]);
+  const [newTc, setNewTc] = useState({ materialId: '', quantityPerUnit: '' });
 
-  useEffect(() => { fetchProducts(); }, []);
+  useEffect(() => { fetchProducts(); fetchMaterials(); }, []);
 
   const fetchProducts = async () => {
     setLoading(true);
-    try {
-      const res = await productsApi.getAll();
-      setProducts(res.data);
-    } catch { toast.error(t('common.error')); }
+    try { const res = await productsApi.getAll(); setProducts(res.data); }
+    catch { toast.error(t('common.error')); }
     finally { setLoading(false); }
+  };
+
+  const fetchMaterials = async () => {
+    try { const res = await materialsApi.getAll(); setAllMaterials(res.data); } catch {}
   };
 
   const openCreate = () => {
     setEditProduct(null);
     setForm({ name: '', description: '', price: 0, laborCost: 0 });
-    setOperations([]);
-    setNewOp({ name: '', cost: '' });
+    setOperations([]); setNewOp({ name: '', cost: '' });
+    setTechCard([]); setNewTc({ materialId: '', quantityPerUnit: '' });
     setShowModal(true);
-  };
-
-  const addOperation = async () => {
-    if (!newOp.name || !newOp.cost || !editProduct) return;
-    try {
-      await sewingOperationsApi.create({ productId: editProduct.id, name: newOp.name, cost: parseFloat(newOp.cost) });
-      const res = await sewingOperationsApi.getByProduct(editProduct.id);
-      setOperations(res.data);
-      setNewOp({ name: '', cost: '' });
-    } catch { toast.error(t('common.error')); }
-  };
-
-  const deleteOperation = async (opId) => {
-    try {
-      await sewingOperationsApi.delete(opId);
-      setOperations(operations.filter(o => o.id !== opId));
-    } catch { toast.error(t('common.error')); }
   };
 
   const openEdit = async (p) => {
@@ -59,6 +47,9 @@ export default function ProductsPage() {
     setForm({ name: p.name, description: p.description || '', price: p.price, laborCost: p.laborCost || 0 });
     try { const res = await sewingOperationsApi.getByProduct(p.id); setOperations(res.data); }
     catch { setOperations(p.sewingOperations || []); }
+    try { const res = await technicalCardApi.getByProduct(p.id); setTechCard(res.data); }
+    catch { setTechCard(p.technicalCard || []); }
+    setNewOp({ name: '', cost: '' }); setNewTc({ materialId: '', quantityPerUnit: '' });
     setShowModal(true);
   };
 
@@ -68,27 +59,53 @@ export default function ProductsPage() {
       if (editProduct) {
         await productsApi.update(editProduct.id, form);
         toast.success(t('products.updated'));
+        setShowModal(false); fetchProducts();
       } else {
-        await productsApi.create(form);
+        const res = await productsApi.create(form);
         toast.success(t('products.created'));
+        fetchProducts();
+        setEditProduct(res.data);
+        setOperations([]); setTechCard([]);
       }
-      setShowModal(false);
-      fetchProducts();
     } catch (err) { toast.error(err.response?.data?.message || t('common.error')); }
   };
 
   const handleDelete = async (id) => {
     if (!window.confirm(t('products.confirmDelete'))) return;
+    try { await productsApi.delete(id); toast.success(t('products.deleted')); fetchProducts(); }
+    catch { toast.error(t('common.error')); }
+  };
+
+  const addOperation = async () => {
+    if (!newOp.name || !newOp.cost || !editProduct) return;
     try {
-      await productsApi.delete(id);
-      toast.success(t('products.deleted'));
-      fetchProducts();
+      await sewingOperationsApi.create({ productId: editProduct.id, name: newOp.name, cost: parseFloat(newOp.cost) });
+      const res = await sewingOperationsApi.getByProduct(editProduct.id);
+      setOperations(res.data); setNewOp({ name: '', cost: '' });
     } catch { toast.error(t('common.error')); }
   };
 
-  const filtered = products.filter(p =>
-    search === '' || p.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const deleteOperation = async (opId) => {
+    try { await sewingOperationsApi.delete(opId); setOperations(operations.filter(o => o.id !== opId)); }
+    catch { toast.error(t('common.error')); }
+  };
+
+  const addTechCardItem = async () => {
+    if (!newTc.materialId || !newTc.quantityPerUnit || !editProduct) return;
+    try {
+      await technicalCardApi.create({ productId: editProduct.id, materialId: parseInt(newTc.materialId), quantityPerUnit: parseFloat(newTc.quantityPerUnit) });
+      const res = await technicalCardApi.getByProduct(editProduct.id);
+      setTechCard(res.data); setNewTc({ materialId: '', quantityPerUnit: '' });
+    } catch { toast.error(t('common.error')); }
+  };
+
+  const deleteTechCardItem = async (tcId) => {
+    try { await technicalCardApi.delete(tcId); setTechCard(techCard.filter(tc => tc.id !== tcId)); }
+    catch { toast.error(t('common.error')); }
+  };
+
+  const filtered = products.filter(p => search === '' || p.name.toLowerCase().includes(search.toLowerCase()));
+  const unitLabel = (u) => t(`inventory.units.${u}`) || u;
 
   if (loading) return <LoadingSpinner />;
 
@@ -106,8 +123,7 @@ export default function ProductsPage() {
 
       <div className="relative max-w-md mb-6">
         <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-        <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
-          placeholder={t('products.search')}
+        <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('products.search')}
           className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none" />
       </div>
 
@@ -120,8 +136,8 @@ export default function ProductsPage() {
                   <th className="text-left px-6 py-4 font-medium">{t('products.name')}</th>
                   <th className="text-left px-6 py-4 font-medium">{t('products.description')}</th>
                   <th className="text-right px-6 py-4 font-medium">{t('products.price')}</th>
-                  <th className="text-right px-6 py-4 font-medium">{t('products.laborCost')}</th>
                   <th className="text-center px-6 py-4 font-medium">{t('products.materials')}</th>
+                  <th className="text-center px-6 py-4 font-medium">{t('operations.title')}</th>
                   <th className="text-center px-6 py-4 font-medium">{t('common.actions')}</th>
                 </tr>
               </thead>
@@ -130,26 +146,18 @@ export default function ProductsPage() {
                   <tr key={p.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-primary-50 rounded-lg flex items-center justify-center">
-                          <FiBox size={18} className="text-primary-500" />
-                        </div>
+                        <div className="w-10 h-10 bg-primary-50 rounded-lg flex items-center justify-center"><FiBox size={18} className="text-primary-500" /></div>
                         <span className="text-sm font-medium text-gray-800">{p.name}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500 max-w-[200px] truncate">{p.description || '—'}</td>
                     <td className="px-6 py-4 text-sm font-semibold text-gray-800 text-right">{p.price?.toLocaleString()} {t('common.som')}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500 text-right">{p.laborCost?.toLocaleString() || '—'} {t('common.som')}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500 text-center">
-                      {p.sewingOperations?.length || 0} {t('operations.title').toLowerCase()}
-                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500 text-center">{p.technicalCard?.length || 0}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500 text-center">{p.sewingOperations?.length || 0}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-center gap-2">
-                        <button onClick={() => openEdit(p)} className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg">
-                          <FiEdit2 size={16} />
-                        </button>
-                        <button onClick={() => handleDelete(p.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
-                          <FiTrash2 size={16} />
-                        </button>
+                        <button onClick={() => openEdit(p)} className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg"><FiEdit2 size={16} /></button>
+                        <button onClick={() => handleDelete(p.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><FiTrash2 size={16} /></button>
                       </div>
                     </td>
                   </tr>
@@ -160,7 +168,8 @@ export default function ProductsPage() {
         )}
       </div>
 
-      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editProduct ? t('products.editTitle') : t('products.createTitle')}>
+      <Modal isOpen={showModal} onClose={() => setShowModal(false)}
+        title={editProduct ? t('products.editTitle') : t('products.createTitle')} maxWidth="max-w-2xl">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase mb-2">{t('products.name')}</label>
@@ -186,7 +195,52 @@ export default function ProductsPage() {
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none" />
             </div>
           </div>
-          {/* Sewing operations - only for existing products */}
+
+          {!editProduct && (
+            <p className="text-xs text-blue-600 bg-blue-50 border border-blue-200 rounded-xl p-3">
+              Сохраните модель — затем добавьте расход материалов и операции пошива
+            </p>
+          )}
+
+          {/* Technical card - material usage per unit */}
+          {editProduct && (
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase mb-2">
+                <FiPackage className="inline mr-1" size={14} />
+                {t('orders.materialUsage')} ({t('orders.perUnit')})
+              </label>
+              <div className="bg-gray-50 rounded-xl p-3 space-y-2 mb-2">
+                {techCard.length === 0 ? (
+                  <p className="text-xs text-gray-400">{t('orders.noTechCard')}</p>
+                ) : (
+                  techCard.map((tc) => (
+                    <div key={tc.id} className="flex items-center justify-between bg-white rounded-lg px-3 py-2">
+                      <span className="text-sm text-gray-700">{tc.material?.name}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-blue-600">{tc.quantityPerUnit} {unitLabel(tc.material?.unit)}</span>
+                        <button type="button" onClick={() => deleteTechCardItem(tc.id)} className="text-gray-400 hover:text-red-500"><FiX size={14} /></button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className="flex gap-2">
+                <select value={newTc.materialId} onChange={(e) => setNewTc({ ...newTc, materialId: e.target.value })}
+                  className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none">
+                  <option value="">{t('orders.material')}...</option>
+                  {allMaterials.map(m => <option key={m.id} value={m.id}>{m.name} ({m.quantity} {unitLabel(m.unit)})</option>)}
+                </select>
+                <input type="number" min="0.001" step="0.001" value={newTc.quantityPerUnit}
+                  onChange={(e) => setNewTc({ ...newTc, quantityPerUnit: e.target.value })} placeholder={t('orders.perUnit')}
+                  className="w-28 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none" />
+                <button type="button" onClick={addTechCardItem} className="px-3 py-2 bg-blue-100 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-200">
+                  <FiPlus size={16} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Sewing operations */}
           {editProduct && (
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase mb-2">{t('operations.title')}</label>
@@ -199,9 +253,7 @@ export default function ProductsPage() {
                       <span className="text-sm text-gray-700">{op.name}</span>
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-primary-600">{op.cost} {t('common.som')}</span>
-                        <button type="button" onClick={() => deleteOperation(op.id)} className="text-gray-400 hover:text-red-500">
-                          <FiX size={14} />
-                        </button>
+                        <button type="button" onClick={() => deleteOperation(op.id)} className="text-gray-400 hover:text-red-500"><FiX size={14} /></button>
                       </div>
                     </div>
                   ))
@@ -223,9 +275,12 @@ export default function ProductsPage() {
               </div>
             </div>
           )}
+
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-3 border border-gray-200 text-gray-600 rounded-xl font-medium hover:bg-gray-50 text-sm">{t('common.cancel')}</button>
-            <button type="submit" className="flex-1 py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 text-sm">{t('common.save')}</button>
+            <button type="submit" className="flex-1 py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 text-sm">
+              {editProduct ? t('common.save') : t('products.new')}
+            </button>
           </div>
         </form>
       </Modal>

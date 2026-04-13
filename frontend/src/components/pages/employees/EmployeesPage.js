@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiPlus, FiSearch, FiEdit2, FiUsers, FiUserCheck, FiDownload } from 'react-icons/fi';
+import { FiPlus, FiSearch, FiEdit2, FiUsers, FiUserCheck, FiDownload, FiX } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import Avatar from '../../common/Avatar';
 import StatusBadge from '../../common/StatusBadge';
 import Modal from '../../common/Modal';
 import LoadingSpinner from '../../common/LoadingSpinner';
-import { employeesApi, exportApi } from '../../../api/services';
+import { employeesApi, exportApi, sewingOperationsApi, employeeOperationsApi } from '../../../api/services';
 
 export default function EmployeesPage() {
   const { t } = useTranslation();
@@ -23,8 +23,10 @@ export default function EmployeesPage() {
   const [form, setForm] = useState({
     fullName: '', phone: '', position: '', salaryType: 'PIECEWORK', ratePerItem: 0, fixedSalary: 0, active: true, requisites: ''
   });
+  const [allOperations, setAllOperations] = useState([]);
+  const [empOperations, setEmpOperations] = useState([]);
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { fetchData(); fetchAllOperations(); }, []);
   useEffect(() => { fetchSalary(); }, [selectedMonth]);
 
   const fetchData = async () => {
@@ -32,6 +34,10 @@ export default function EmployeesPage() {
     try { const res = await employeesApi.getAll(); setEmployees(res.data); }
     catch { toast.error(t('common.error')); }
     finally { setLoading(false); }
+  };
+
+  const fetchAllOperations = async () => {
+    try { const res = await sewingOperationsApi.getAll(); setAllOperations(res.data); } catch {}
   };
 
   const fetchSalary = async () => {
@@ -42,6 +48,7 @@ export default function EmployeesPage() {
   const openCreate = () => {
     setEditEmployee(null);
     setForm({ fullName: '', phone: '', position: '', salaryType: 'PIECEWORK', ratePerItem: 0, fixedSalary: 0, active: true, requisites: '' });
+    setEmpOperations([]);
     setShowModal(true);
   };
 
@@ -52,6 +59,7 @@ export default function EmployeesPage() {
       salaryType: emp.salaryType || 'PIECEWORK', ratePerItem: emp.ratePerItem || 0,
       fixedSalary: emp.fixedSalary || 0, active: emp.active, requisites: emp.requisites || ''
     });
+    setEmpOperations(emp.employeeOperations || []);
     setShowModal(true);
   };
 
@@ -76,6 +84,22 @@ export default function EmployeesPage() {
   );
   const totalSalary = salaryData.reduce((s, r) => s + (r.totalSalary || 0), 0);
   const totalDefects = salaryData.reduce((s, r) => s + (r.totalDefective || 0), 0);
+
+  const assignOperation = async (operationId) => {
+    if (!editEmployee || !operationId) return;
+    try {
+      await employeeOperationsApi.assign(editEmployee.id, parseInt(operationId));
+      const res = await employeeOperationsApi.getByEmployee(editEmployee.id);
+      setEmpOperations(res.data);
+    } catch { toast.error(t('common.error')); }
+  };
+
+  const removeOperation = async (eoId) => {
+    try {
+      await employeeOperationsApi.remove(eoId);
+      setEmpOperations(empOperations.filter(eo => eo.id !== eoId));
+    } catch { toast.error(t('common.error')); }
+  };
 
   const handleExport = async (format) => {
     try {
@@ -136,6 +160,13 @@ export default function EmployeesPage() {
                       : `${t('employees.piecework')}: ${emp.ratePerItem} ${t('employees.perItem')}`
                     }
                   </p>
+                  {emp.employeeOperations?.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {emp.employeeOperations.map((eo) => (
+                        <span key={eo.id} className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded">{eo.operation?.name}</span>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <button onClick={() => openEdit(emp)} className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg">
                   <FiEdit2 size={16} />
@@ -276,6 +307,36 @@ export default function EmployeesPage() {
               <input type="number" min="0" step="0.01" value={form.fixedSalary}
                 onChange={(e) => setForm({ ...form, fixedSalary: parseFloat(e.target.value) || 0 })} required
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none" />
+            </div>
+          )}
+          {/* Assigned operations */}
+          {editEmployee && (
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase mb-2">{t('operations.title')}</label>
+              <div className="bg-gray-50 rounded-xl p-3 space-y-2 mb-2">
+                {empOperations.length === 0 ? (
+                  <p className="text-xs text-gray-400">{t('common.noData')}</p>
+                ) : (
+                  empOperations.map((eo) => (
+                    <div key={eo.id} className="flex items-center justify-between bg-white rounded-lg px-3 py-2">
+                      <span className="text-sm text-gray-700">{eo.operation?.name}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-primary-600">{eo.operation?.cost} {t('common.som')}</span>
+                        <button type="button" onClick={() => removeOperation(eo.id)} className="text-gray-400 hover:text-red-500">
+                          <FiX size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+              <select onChange={(e) => { assignOperation(e.target.value); e.target.value = ''; }}
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none">
+                <option value="">{t('operations.add')}...</option>
+                {allOperations.filter(op => !empOperations.some(eo => eo.operation?.id === op.id)).map(op => (
+                  <option key={op.id} value={op.id}>{op.name} ({op.product?.name}) — {op.cost} {t('common.som')}</option>
+                ))}
+              </select>
             </div>
           )}
           <div>

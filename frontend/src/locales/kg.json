@@ -62,7 +62,16 @@
     "stockWarning": "Эскертүү: материалдар жетишсиз",
     "stockNeeded": "Керек",
     "stockAvailable": "кампада",
-    "pcs": "даана"
+    "pcs": "даана",
+    "materialUsage": "Материал сарптоо",
+    "material": "Материал",
+    "perUnit": "1 бир. үчүн",
+    "totalNeed": "Бардыгы керек",
+    "inStock": "Кампада",
+    "stockStatus": "Статус",
+    "enough": "Жетиштүү",
+    "notEnough": "Жетишсиз",
+    "noTechCard": "Бул модель үчүн техкарта коюлган эмес"
   },
   "clients": {
     "title": "Кардарлар",

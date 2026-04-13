@@ -62,7 +62,16 @@
     "stockWarning": "Внимание: не хватает материалов",
     "stockNeeded": "Нужно",
     "stockAvailable": "на складе",
-    "pcs": "шт."
+    "pcs": "шт.",
+    "materialUsage": "Расход материалов",
+    "material": "Материал",
+    "perUnit": "На 1 ед.",
+    "totalNeed": "Нужно всего",
+    "inStock": "На складе",
+    "stockStatus": "Статус",
+    "enough": "Хватает",
+    "notEnough": "Не хватает",
+    "noTechCard": "Техкарта не задана для этой модели"
   },
   "clients": {
     "title": "Клиенты",

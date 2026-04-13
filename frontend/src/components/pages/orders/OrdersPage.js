@@ -25,6 +25,8 @@ export default function OrdersPage() {
   const [products, setProducts] = useState([]);
   const [form, setForm] = useState({ clientId: '', productId: '', quantity: 1, deadline: '', notes: '' });
   const [stockWarnings, setStockWarnings] = useState([]);
+  const [stockCheck, setStockCheck] = useState(null);
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const itemsPerPage = 10;
 
   useEffect(() => { fetchOrders(); }, []);
@@ -44,15 +46,24 @@ export default function OrdersPage() {
   };
 
   const checkStockAvailability = async (productId, quantity) => {
-    if (!productId || !quantity) { setStockWarnings([]); return; }
-    try { const res = await materialsApi.checkStock(productId, quantity); setStockWarnings(res.data.warnings || []); }
-    catch { setStockWarnings([]); }
+    if (!productId || !quantity) { setStockWarnings([]); setStockCheck(null); return; }
+    try {
+      const [stockRes, prodRes] = await Promise.all([
+        materialsApi.checkStock(productId, quantity),
+        productsApi.getById(productId),
+      ]);
+      setStockCheck(stockRes.data);
+      setStockWarnings(stockRes.data.warnings || []);
+      setSelectedProduct(prodRes.data);
+    } catch { setStockWarnings([]); setStockCheck(null); }
   };
 
   const openCreateModal = () => {
     setEditOrder(null);
     setForm({ clientId: '', productId: '', quantity: 1, deadline: '', notes: '' });
     setStockWarnings([]);
+    setStockCheck(null);
+    setSelectedProduct(null);
     fetchFormData();
     setShowModal(true);
   };
@@ -215,14 +226,51 @@ export default function OrdersPage() {
             <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3}
               className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none resize-none" />
           </div>
+          {/* Material usage table */}
+          {selectedProduct && selectedProduct.technicalCard && selectedProduct.technicalCard.length > 0 && (
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+              <p className="text-sm font-semibold text-gray-700 mb-3">{t('orders.materialUsage')}</p>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-gray-400 uppercase">
+                    <th className="text-left pb-2 font-medium">{t('orders.material')}</th>
+                    <th className="text-center pb-2 font-medium">{t('orders.perUnit')}</th>
+                    <th className="text-center pb-2 font-medium">{t('orders.totalNeed')}</th>
+                    <th className="text-center pb-2 font-medium">{t('orders.inStock')}</th>
+                    <th className="text-center pb-2 font-medium">{t('orders.stockStatus')}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {selectedProduct.technicalCard.map((tc, i) => {
+                    const needed = (tc.quantityPerUnit * form.quantity).toFixed(1);
+                    const available = tc.material?.quantity || 0;
+                    const isEnough = available >= needed;
+                    return (
+                      <tr key={i}>
+                        <td className="py-2 text-gray-700 font-medium">{tc.material?.name}</td>
+                        <td className="py-2 text-gray-500 text-center">{tc.quantityPerUnit}</td>
+                        <td className="py-2 text-gray-700 text-center font-medium">{needed}</td>
+                        <td className="py-2 text-gray-500 text-center">{available}</td>
+                        <td className="py-2 text-center">
+                          <span className={`px-2 py-0.5 rounded-full font-semibold ${isEnough ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                            {isEnough ? t('orders.enough') : t('orders.notEnough')}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {selectedProduct && (!selectedProduct.technicalCard || selectedProduct.technicalCard.length === 0) && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-xs text-yellow-700">
+              {t('orders.noTechCard')}
+            </div>
+          )}
           {stockWarnings.length > 0 && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-              <p className="text-sm font-semibold text-yellow-800 mb-2">{t('orders.stockWarning')}</p>
-              {stockWarnings.map((w, i) => (
-                <p key={i} className="text-xs text-yellow-700">
-                  {w.materialName}: {t('orders.stockNeeded')} {w.required} — {t('orders.stockAvailable')} {w.available}
-                </p>
-              ))}
+            <div className="bg-red-50 border border-red-200 rounded-xl p-3">
+              <p className="text-xs font-semibold text-red-700">{t('orders.stockWarning')}: {stockWarnings.length} {t('orders.material').toLowerCase()}</p>
             </div>
           )}
           <div className="flex gap-3 pt-2">

@@ -74,6 +74,18 @@ export const expensesApi = {
   delete: (id) => api.delete(`/expenses/${id}`),
 };
 
+export const technicalCardApi = {
+  getByProduct: (productId) => api.get(`/technical-card/product/${productId}`),
+  create: (data) => api.post('/technical-card', data),
+  delete: (id) => api.delete(`/technical-card/${id}`),
+};
+
+export const employeeOperationsApi = {
+  getByEmployee: (employeeId) => api.get(`/employee-operations/employee/${employeeId}`),
+  assign: (employeeId, operationId) => api.post('/employee-operations', { employeeId, operationId }),
+  remove: (id) => api.delete(`/employee-operations/${id}`),
+};
+
 export const sewingOperationsApi = {
   getByProduct: (productId) => api.get(`/sewing-operations/product/${productId}`),
   getAll: () => api.get('/sewing-operations'),

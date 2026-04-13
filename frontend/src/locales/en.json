@@ -62,7 +62,16 @@
     "stockWarning": "Warning: insufficient materials",
     "stockNeeded": "Needed",
     "stockAvailable": "in stock",
-    "pcs": "pcs"
+    "pcs": "pcs",
+    "materialUsage": "Material Usage",
+    "material": "Material",
+    "perUnit": "Per unit",
+    "totalNeed": "Total needed",
+    "inStock": "In stock",
+    "stockStatus": "Status",
+    "enough": "Enough",
+    "notEnough": "Not enough",
+    "noTechCard": "No technical card set for this model"
   },
   "clients": {
     "title": "Clients",
