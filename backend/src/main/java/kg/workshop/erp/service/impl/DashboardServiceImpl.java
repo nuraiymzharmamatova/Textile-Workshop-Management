@@ -1,6 +1,7 @@
 package kg.workshop.erp.service.impl;
 
 import kg.workshop.erp.dto.response.DashboardResponse;
+import kg.workshop.erp.entity.Order;
 import kg.workshop.erp.enums.OrderStatus;
 import kg.workshop.erp.repository.MaterialRepository;
 import kg.workshop.erp.repository.OrderRepository;
@@ -12,8 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -26,22 +26,29 @@ public class DashboardServiceImpl implements DashboardService {
 
     @Override
     public DashboardResponse getStats() {
+        // Total revenue from ALL completed orders
+        List<Order> allOrders = orderRepository.findAll();
+        BigDecimal revenue = allOrders.stream()
+                .filter(o -> o.getStatus() == OrderStatus.COMPLETED)
+                .map(Order::getTotalPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        long totalOrders = allOrders.size();
+        long activeOrders = allOrders.stream()
+                .filter(o -> o.getStatus() == OrderStatus.IN_PROGRESS
+                        || o.getStatus() == OrderStatus.SEWING
+                        || o.getStatus() == OrderStatus.CUTTING
+                        || o.getStatus() == OrderStatus.PACKAGING)
+                .count();
+        long completedOrders = allOrders.stream()
+                .filter(o -> o.getStatus() == OrderStatus.COMPLETED)
+                .count();
+
+        // Total production stats - all time
+        LocalDate farPast = LocalDate.of(2020, 1, 1);
         LocalDate now = LocalDate.now();
-        LocalDateTime monthStart = now.withDayOfMonth(1).atStartOfDay();
-        LocalDateTime monthEnd = now.atTime(LocalTime.MAX);
-
-        LocalDate monthStartDate = now.withDayOfMonth(1);
-
-        BigDecimal revenue = orderRepository.calculateRevenue(monthStart, monthEnd);
-        long totalOrders = orderRepository.count();
-        long activeOrders = orderRepository.countByStatus(OrderStatus.IN_PROGRESS)
-                + orderRepository.countByStatus(OrderStatus.SEWING)
-                + orderRepository.countByStatus(OrderStatus.CUTTING)
-                + orderRepository.countByStatus(OrderStatus.PACKAGING);
-        long completedOrders = orderRepository.countByStatus(OrderStatus.COMPLETED);
-
-        int totalSewn = productionReportRepository.sumSewnByPeriod(monthStartDate, now);
-        int totalDefective = productionReportRepository.sumDefectiveByPeriod(monthStartDate, now);
+        int totalSewn = productionReportRepository.sumSewnByPeriod(farPast, now);
+        int totalDefective = productionReportRepository.sumDefectiveByPeriod(farPast, now);
 
         int lowStockCount = materialRepository.findLowStockMaterials().size();
 

@@ -152,6 +152,11 @@ export default function ProductionPage() {
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none resize-none" />
             </div>
             {/* Auto salary calculation */}
+            {form.orderId && orderOperations.length === 0 && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-xs text-yellow-700">
+                {t('orders.noTechCard')} — {t('operations.add')} в {t('nav.products')}
+              </div>
+            )}
             {orderOperations.length > 0 && form.sewn > 0 && (
               <div className="bg-green-50 border border-green-200 rounded-xl p-3">
                 <p className="text-xs font-semibold text-green-700 mb-2">{t('employees.salaryCalc')}:</p>
