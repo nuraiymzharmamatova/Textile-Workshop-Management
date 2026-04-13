@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiDownload, FiBarChart2, FiTrendingUp, FiAlertTriangle, FiCalendar } from 'react-icons/fi';
+import { FiDownload, FiBarChart2, FiTrendingUp, FiAlertTriangle, FiCalendar, FiPlus, FiTrash2 } from 'react-icons/fi';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { toast } from 'react-toastify';
+import Modal from '../../common/Modal';
+import { expensesApi } from '../../../api/services';
 
 const monthlyData = [
   { month: 'Янв', revenue: 980000, expenses: 650000 },
@@ -35,10 +38,41 @@ const statusLabels = {
   cancelled: { ru: 'Отменён', en: 'Cancelled', kg: 'Жокко чыгарылды' },
 };
 
+const EXPENSE_CATEGORIES = ['electricity', 'rent', 'transport', 'other'];
+
 export default function ReportsPage() {
   const { t, i18n } = useTranslation();
   const [period, setPeriod] = useState('6months');
   const lang = i18n.language || 'ru';
+  const [expenses, setExpenses] = useState([]);
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [expenseForm, setExpenseForm] = useState({ category: 'electricity', description: '', amount: '', expenseDate: new Date().toISOString().split('T')[0] });
+
+  useEffect(() => {
+    expensesApi.getAll().then(r => setExpenses(r.data)).catch(() => {});
+  }, []);
+
+  const handleExpenseSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await expensesApi.create(expenseForm);
+      toast.success(t('expenses.created'));
+      setShowExpenseModal(false);
+      const r = await expensesApi.getAll();
+      setExpenses(r.data);
+    } catch { toast.error(t('common.error')); }
+  };
+
+  const handleExpenseDelete = async (id) => {
+    if (!window.confirm(t('expenses.confirmDelete'))) return;
+    try {
+      await expensesApi.delete(id);
+      toast.success(t('expenses.deleted'));
+      setExpenses(expenses.filter(e => e.id !== id));
+    } catch { toast.error(t('common.error')); }
+  };
+
+  const totalExpenses = expenses.reduce((s, e) => s + (e.amount || 0), 0);
 
   return (
     <div>
@@ -158,6 +192,91 @@ export default function ReportsPage() {
           </div>
         </div>
       </div>
+
+      {/* Expenses section */}
+      <div className="mt-8">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-700">{t('expenses.title')}</h3>
+          <button onClick={() => { setExpenseForm({ category: 'electricity', description: '', amount: '', expenseDate: new Date().toISOString().split('T')[0] }); setShowExpenseModal(true); }}
+            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700">
+            <FiPlus size={16} /> {t('expenses.new')}
+          </button>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          {expenses.length === 0 ? (
+            <p className="text-gray-400 text-sm text-center py-8">{t('common.noData')}</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gray-50 text-xs text-gray-400 uppercase">
+                    <th className="text-left px-6 py-3 font-medium">{t('expenses.category')}</th>
+                    <th className="text-left px-6 py-3 font-medium">{t('expenses.description')}</th>
+                    <th className="text-right px-6 py-3 font-medium">{t('expenses.amount')}</th>
+                    <th className="text-center px-6 py-3 font-medium">{t('expenses.date')}</th>
+                    <th className="text-center px-6 py-3 font-medium">{t('common.actions')}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {expenses.map((exp) => (
+                    <tr key={exp.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-3 text-sm text-gray-700">{t(`expenses.${exp.category}`) || exp.category}</td>
+                      <td className="px-6 py-3 text-sm text-gray-600">{exp.description || '—'}</td>
+                      <td className="px-6 py-3 text-sm font-semibold text-gray-800 text-right">{exp.amount?.toLocaleString()} {t('common.som')}</td>
+                      <td className="px-6 py-3 text-sm text-gray-500 text-center">{exp.expenseDate}</td>
+                      <td className="px-6 py-3 text-center">
+                        <button onClick={() => handleExpenseDelete(exp.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
+                          <FiTrash2 size={15} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="px-6 py-3 bg-gray-50 border-t text-sm font-semibold text-gray-700">
+                {t('expenses.total')}: {totalExpenses.toLocaleString()} {t('common.som')}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Expense Modal */}
+      <Modal isOpen={showExpenseModal} onClose={() => setShowExpenseModal(false)} title={t('expenses.new')}>
+        <form onSubmit={handleExpenseSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-2">{t('expenses.category')}</label>
+            <select value={expenseForm.category} onChange={(e) => setExpenseForm({ ...expenseForm, category: e.target.value })}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none">
+              {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{t(`expenses.${c}`)}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-2">{t('expenses.description')}</label>
+            <input type="text" value={expenseForm.description} onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase mb-2">{t('expenses.amount')} ({t('common.som')})</label>
+              <input type="number" min="0" step="0.01" value={expenseForm.amount}
+                onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })} required
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase mb-2">{t('expenses.date')}</label>
+              <input type="date" value={expenseForm.expenseDate}
+                onChange={(e) => setExpenseForm({ ...expenseForm, expenseDate: e.target.value })} required
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none" />
+            </div>
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={() => setShowExpenseModal(false)} className="flex-1 py-3 border border-gray-200 text-gray-600 rounded-xl font-medium hover:bg-gray-50 text-sm">{t('common.cancel')}</button>
+            <button type="submit" className="flex-1 py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 text-sm">{t('common.save')}</button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

@@ -177,7 +177,8 @@
     "created": "Сотрудник добавлен",
     "updated": "Сотрудник обновлён",
     "perItem": "сом/шт",
-    "perMonth": "сом/мес"
+    "perMonth": "сом/мес",
+    "requisites": "Реквизиты (банк, счёт, ИНН)"
   },
   "products": {
     "title": "Продукция",
@@ -252,5 +253,33 @@
     "error": "Ошибка",
     "success": "Успешно",
     "confirm": "Вы уверены?"
+  },
+  "expenses": {
+    "title": "Расходы",
+    "new": "Новый расход",
+    "category": "Категория",
+    "description": "Описание",
+    "amount": "Сумма",
+    "date": "Дата",
+    "electricity": "Электричество",
+    "rent": "Аренда",
+    "transport": "Транспорт",
+    "other": "Прочее",
+    "created": "Расход добавлен",
+    "deleted": "Расход удалён",
+    "confirmDelete": "Удалить расход?",
+    "total": "Итого расходов"
+  },
+  "operations": {
+    "title": "Операции пошива",
+    "name": "Название операции",
+    "cost": "Стоимость",
+    "add": "Добавить операцию",
+    "totalCost": "Итого за работу"
+  },
+  "export": {
+    "salaryPdf": "Зарплата PDF",
+    "salaryExcel": "Зарплата Excel",
+    "exporting": "Экспорт..."
   }
 }

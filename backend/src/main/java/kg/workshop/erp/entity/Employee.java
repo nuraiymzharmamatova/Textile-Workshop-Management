@@ -49,10 +49,18 @@ public class Employee {
     @Builder.Default
     private Boolean active = true;
 
+    @Column(columnDefinition = "TEXT")
+    private String requisites;
+
     @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL)
     @JsonIgnoreProperties("employee")
     @Builder.Default
     private List<ProductionReport> productionReports = new ArrayList<>();
+
+    @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnoreProperties("employee")
+    @Builder.Default
+    private List<EmployeeOperation> employeeOperations = new ArrayList<>();
 
     @CreationTimestamp
     private LocalDateTime createdAt;

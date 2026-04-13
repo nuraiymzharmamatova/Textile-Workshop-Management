@@ -43,6 +43,11 @@ public class Product {
     @Builder.Default
     private List<TechnicalCardItem> technicalCard = new ArrayList<>();
 
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnoreProperties("product")
+    @Builder.Default
+    private List<SewingOperation> sewingOperations = new ArrayList<>();
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 }

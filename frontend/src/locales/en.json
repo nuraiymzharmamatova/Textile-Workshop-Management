@@ -177,7 +177,8 @@
     "created": "Employee added",
     "updated": "Employee updated",
     "perItem": "som/item",
-    "perMonth": "som/month"
+    "perMonth": "som/month",
+    "requisites": "Bank details (account, tax ID)"
   },
   "products": {
     "title": "Products",
@@ -252,5 +253,33 @@
     "error": "Error",
     "success": "Success",
     "confirm": "Are you sure?"
+  },
+  "expenses": {
+    "title": "Expenses",
+    "new": "New Expense",
+    "category": "Category",
+    "description": "Description",
+    "amount": "Amount",
+    "date": "Date",
+    "electricity": "Electricity",
+    "rent": "Rent",
+    "transport": "Transport",
+    "other": "Other",
+    "created": "Expense added",
+    "deleted": "Expense deleted",
+    "confirmDelete": "Delete expense?",
+    "total": "Total expenses"
+  },
+  "operations": {
+    "title": "Sewing Operations",
+    "name": "Operation name",
+    "cost": "Cost",
+    "add": "Add operation",
+    "totalCost": "Total labor cost"
+  },
+  "export": {
+    "salaryPdf": "Salary PDF",
+    "salaryExcel": "Salary Excel",
+    "exporting": "Exporting..."
   }
 }

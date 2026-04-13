@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiPlus, FiSearch, FiEdit2, FiTrash2 } from 'react-icons/fi';
 import { toast } from 'react-toastify';
-import StatusBadge from '../../common/StatusBadge';
+import StatusBadge, { getStatusLabel } from '../../common/StatusBadge';
 import Avatar from '../../common/Avatar';
 import Pagination from '../../common/Pagination';
 import EmptyState from '../../common/EmptyState';
@@ -13,7 +13,7 @@ import { ordersApi, clientsApi, productsApi, materialsApi } from '../../../api/s
 const ORDER_STATUSES = ['NEW', 'IN_PROGRESS', 'CUTTING', 'SEWING', 'PACKAGING', 'SHIPPED', 'COMPLETED', 'CANCELLED'];
 
 export default function OrdersPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -116,7 +116,7 @@ export default function OrdersPage() {
         <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
           className="px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm cursor-pointer focus:ring-2 focus:ring-primary-500 outline-none">
           <option value="ALL">{t('orders.allStatuses')}</option>
-          {ORDER_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+          {ORDER_STATUSES.map((s) => <option key={s} value={s}>{getStatusLabel(s, i18n.language)}</option>)}
         </select>
       </div>
 
@@ -153,7 +153,7 @@ export default function OrdersPage() {
                       <td className="px-6 py-4 text-center">
                         <select value={order.status} onChange={(e) => handleStatusChange(order.id, e.target.value)}
                           className="text-xs border-none bg-transparent cursor-pointer focus:outline-none">
-                          {ORDER_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                          {ORDER_STATUSES.map((s) => <option key={s} value={s}>{getStatusLabel(s, i18n.language)}</option>)}
                         </select>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500 text-center">{order.deadline || '—'}</td>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 const statusConfig = {
   NEW: { label: { en: 'New', ru: 'Новый', kg: 'Жаңы' }, bg: 'bg-gray-100', text: 'text-gray-700' },
@@ -13,7 +14,14 @@ const statusConfig = {
   INACTIVE: { label: { en: 'Inactive', ru: 'Неактивен', kg: 'Активдүү эмес' }, bg: 'bg-gray-100', text: 'text-gray-500' },
 };
 
-export default function StatusBadge({ status, lang = 'ru' }) {
+export function getStatusLabel(status, lang) {
+  const config = statusConfig[status] || statusConfig.NEW;
+  return config.label[lang] || config.label.ru;
+}
+
+export default function StatusBadge({ status }) {
+  const { i18n } = useTranslation();
+  const lang = i18n.language || 'ru';
   const config = statusConfig[status] || statusConfig.NEW;
   const label = config.label[lang] || config.label.ru;
 

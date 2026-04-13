@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiPlus, FiSearch, FiEdit2, FiUsers, FiUserCheck } from 'react-icons/fi';
+import { FiPlus, FiSearch, FiEdit2, FiUsers, FiUserCheck, FiDownload } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import Avatar from '../../common/Avatar';
 import StatusBadge from '../../common/StatusBadge';
 import Modal from '../../common/Modal';
 import LoadingSpinner from '../../common/LoadingSpinner';
-import { employeesApi } from '../../../api/services';
+import { employeesApi, exportApi } from '../../../api/services';
 
 export default function EmployeesPage() {
   const { t } = useTranslation();
@@ -21,7 +21,7 @@ export default function EmployeesPage() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
   const [form, setForm] = useState({
-    fullName: '', phone: '', position: '', salaryType: 'PIECEWORK', ratePerItem: 0, fixedSalary: 0, active: true
+    fullName: '', phone: '', position: '', salaryType: 'PIECEWORK', ratePerItem: 0, fixedSalary: 0, active: true, requisites: ''
   });
 
   useEffect(() => { fetchData(); }, []);
@@ -41,7 +41,7 @@ export default function EmployeesPage() {
 
   const openCreate = () => {
     setEditEmployee(null);
-    setForm({ fullName: '', phone: '', position: '', salaryType: 'PIECEWORK', ratePerItem: 0, fixedSalary: 0, active: true });
+    setForm({ fullName: '', phone: '', position: '', salaryType: 'PIECEWORK', ratePerItem: 0, fixedSalary: 0, active: true, requisites: '' });
     setShowModal(true);
   };
 
@@ -50,7 +50,7 @@ export default function EmployeesPage() {
     setForm({
       fullName: emp.fullName, phone: emp.phone || '', position: emp.position,
       salaryType: emp.salaryType || 'PIECEWORK', ratePerItem: emp.ratePerItem || 0,
-      fixedSalary: emp.fixedSalary || 0, active: emp.active
+      fixedSalary: emp.fixedSalary || 0, active: emp.active, requisites: emp.requisites || ''
     });
     setShowModal(true);
   };
@@ -76,6 +76,16 @@ export default function EmployeesPage() {
   );
   const totalSalary = salaryData.reduce((s, r) => s + (r.totalSalary || 0), 0);
   const totalDefects = salaryData.reduce((s, r) => s + (r.totalDefective || 0), 0);
+
+  const handleExport = async (format) => {
+    try {
+      const res = format === 'pdf' ? await exportApi.salaryPdf(selectedMonth) : await exportApi.salaryExcel(selectedMonth);
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const a = document.createElement('a'); a.href = url;
+      a.download = `salary_${selectedMonth}.${format === 'pdf' ? 'pdf' : 'xlsx'}`;
+      a.click(); window.URL.revokeObjectURL(url);
+    } catch { toast.error(t('common.error')); }
+  };
 
   if (loading) return <LoadingSpinner />;
 
@@ -157,8 +167,16 @@ export default function EmployeesPage() {
               <FiUserCheck size={18} className="text-primary-600" />
               <h3 className="font-semibold text-gray-700">{t('employees.salaryCalc')}</h3>
             </div>
-            <input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)}
-              className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none" />
+            <div className="flex items-center gap-2">
+              <input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)}
+                className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none" />
+              <button onClick={() => handleExport('pdf')} className="flex items-center gap-1 px-3 py-2 bg-red-50 text-red-600 rounded-lg text-xs font-medium hover:bg-red-100">
+                <FiDownload size={14} /> PDF
+              </button>
+              <button onClick={() => handleExport('excel')} className="flex items-center gap-1 px-3 py-2 bg-green-50 text-green-600 rounded-lg text-xs font-medium hover:bg-green-100">
+                <FiDownload size={14} /> Excel
+              </button>
+            </div>
           </div>
 
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
@@ -260,6 +278,12 @@ export default function EmployeesPage() {
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none" />
             </div>
           )}
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-2">{t('employees.requisites')}</label>
+            <textarea value={form.requisites} onChange={(e) => setForm({ ...form, requisites: e.target.value })} rows={2}
+              placeholder="Банк, номер счёта, ИНН..."
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none resize-none" />
+          </div>
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-3 border border-gray-200 text-gray-600 rounded-xl font-medium hover:bg-gray-50 text-sm">{t('common.cancel')}</button>
             <button type="submit" className="flex-1 py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 text-sm">{t('common.save')}</button>

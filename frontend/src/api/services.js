@@ -67,6 +67,25 @@ export const profileApi = {
   changePassword: (data) => api.put('/profile/password', data),
 };
 
+export const expensesApi = {
+  getAll: (params) => api.get('/expenses', { params }),
+  create: (data) => api.post('/expenses', data),
+  update: (id, data) => api.put(`/expenses/${id}`, data),
+  delete: (id) => api.delete(`/expenses/${id}`),
+};
+
+export const sewingOperationsApi = {
+  getByProduct: (productId) => api.get(`/sewing-operations/product/${productId}`),
+  getAll: () => api.get('/sewing-operations'),
+  create: (data) => api.post('/sewing-operations', data),
+  delete: (id) => api.delete(`/sewing-operations/${id}`),
+};
+
+export const exportApi = {
+  salaryExcel: (month) => api.get('/export/salary/excel', { params: { month }, responseType: 'blob' }),
+  salaryPdf: (month) => api.get('/export/salary/pdf', { params: { month }, responseType: 'blob' }),
+};
+
 export const uploadApi = {
   uploadImage: (file) => {
     const formData = new FormData();

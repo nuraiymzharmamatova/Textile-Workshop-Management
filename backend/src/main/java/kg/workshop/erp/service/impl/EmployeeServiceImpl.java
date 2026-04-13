@@ -53,6 +53,7 @@ public class EmployeeServiceImpl implements EmployeeService {
         employee.setRatePerItem(updated.getRatePerItem());
         employee.setFixedSalary(updated.getFixedSalary());
         employee.setActive(updated.getActive());
+        employee.setRequisites(updated.getRequisites());
         return employeeRepository.save(employee);
     }
 
