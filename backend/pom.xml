@@ -87,6 +87,12 @@
             <version>${minio.version}</version>
         </dependency>
 
+        <!-- Jackson Hibernate module -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-hibernate6</artifactId>
+        </dependency>
+
         <!-- PDF export -->
         <dependency>
             <groupId>com.itextpdf</groupId>
