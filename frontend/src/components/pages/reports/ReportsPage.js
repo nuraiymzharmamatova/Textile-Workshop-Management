@@ -43,10 +43,10 @@ export default function ReportsPage() {
 
   const handleExport = async (format) => {
     try {
-      const res = format === 'pdf' ? await exportApi.salaryPdf() : await exportApi.salaryExcel();
+      const res = format === 'pdf' ? await exportApi.reportPdf() : await exportApi.reportExcel();
       const url = window.URL.createObjectURL(new Blob([res.data]));
       const a = document.createElement('a'); a.href = url;
-      a.download = `report.${format === 'pdf' ? 'pdf' : 'xlsx'}`;
+      a.download = `financial_report.${format === 'pdf' ? 'pdf' : 'xlsx'}`;
       a.click(); window.URL.revokeObjectURL(url);
     } catch { toast.error(t('common.error')); }
   };

@@ -96,6 +96,8 @@ export const sewingOperationsApi = {
 export const exportApi = {
   salaryExcel: (month) => api.get('/export/salary/excel', { params: { month }, responseType: 'blob' }),
   salaryPdf: (month) => api.get('/export/salary/pdf', { params: { month }, responseType: 'blob' }),
+  reportExcel: () => api.get('/export/report/excel', { responseType: 'blob' }),
+  reportPdf: () => api.get('/export/report/pdf', { responseType: 'blob' }),
 };
 
 export const uploadApi = {
