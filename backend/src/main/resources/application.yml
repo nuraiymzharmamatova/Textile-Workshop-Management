@@ -33,7 +33,7 @@ server:
 # JWT Configuration
 jwt:
   secret: ${JWT_SECRET:my-very-long-secret-key-for-jwt-token-generation-min-256-bits}
-  expiration: 86400000  # 24 hours
+  expiration: 604800000  # 7 days
 
 # MinIO Configuration
 minio:
